@@ -12,6 +12,8 @@ from kivy.animation import Animation
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
+from kivy.properties import ObjectProperty
+
 kivy.require('1.11.1')
 
 THEME_BG = (0.1, 0.1, 0.1, 1)
@@ -20,158 +22,165 @@ ACCENT_COLOR = (0.3, 0.7, 0.9, 1)
 GRAY_BORDER = (0.2, 0.2, 0.2, 1)
 
 class TapToEarnScreen(Screen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    game_ref = ObjectProperty(None)  # Reference to game state (passed from the main app)
+
+    def __init__(self, game_ref, **kwargs):
+        super(TapToEarnScreen, self).__init__(**kwargs)
+        self.game_ref = game_ref  # Set the game_ref if provided
         layout = BoxLayout(orientation='vertical', padding=20, spacing=20)
 
-        self.resources = 0
-        self.income = 1
-        self.resources_per_second = 0
-        self.play_time = 0  # Initialize play_time
-        self.upgrades_bought = 0  # Initialize upgrades_bought
-        self.resources_spent_on_upgrades = 0  # Initialize resources_spent_on_upgrades
-        self.upgrades_maxed_out = False  # Initialize upgrades_maxed_out
-        self.unlocked_achievements = []  # Initialize the unlocked achievements list
-        self.automation_time = 0  # Initialize automation_time (important fix)
+        # Initialize local game variables
+        self.total_clicks = 0
+        self.total_resources_earned = 0
+        self.resources_spent = 0
+        self.auto_generated_resources = 0
 
-        self.resource_label = Label(text=f'Resources: {self.resources}', font_size=28, color=TEXT_COLOR)
+        # Display labels for resources and RPS
+        self.resource_label = Label(text=f'Resources: {self.game_ref.player_resources}', font_size=28, color=(1, 1, 1, 1))
         layout.add_widget(self.resource_label)
 
-        self.rps_label = Label(text=f'RPS: {self.resources_per_second}', font_size=24, color=TEXT_COLOR)
+        self.rps_label = Label(text=f'RPS: {self.game_ref.player_rps}', font_size=24, color=(1, 1, 1, 1))
         layout.add_widget(self.rps_label)
 
         self.icon_button = Button(size_hint=(None, None), size=(200, 200),
                                   background_normal='Factory.png', background_down='Factory.png',
-                                  pos_hint={'center_x': 0.5}, color=ACCENT_COLOR)
+                                  pos_hint={'center_x': 0.5}, color=(1, 1, 1, 1))
         self.icon_button.bind(on_press=self.on_click)
         layout.add_widget(self.icon_button)
 
         self.add_widget(layout)
-        Clock.schedule_interval(self.auto_generate_resources, 1)
 
-        # Add a clock to increment play_time and automation_time every second
-        Clock.schedule_interval(self.update_play_time, 1)
-        Clock.schedule_interval(self.update_automation_time, 1)  # This will update automation_time every second
+        # Schedule functions
+        Clock.schedule_interval(self.auto_generate_resources, 1)  # Auto-generation of resources every second
+        Clock.schedule_interval(self.update_play_time, 1)  # Update play time every second
 
-        # Achievements Data (200 Achievements)
         self.achievements = [
-            # Resource Milestones
-            {'name': 'First Tap', 'description': 'Tap the button for the first time', 'completed': False, 'criteria': lambda: self.resources > 0},
-            {'name': 'Rookie', 'description': 'Reach 100 resources', 'completed': False, 'criteria': lambda: self.resources >= 100},
-            {'name': 'Millionaire', 'description': 'Reach 1,000 resources', 'completed': False, 'criteria': lambda: self.resources >= 1000},
-            {'name': 'Income Boost', 'description': 'Reach 5 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 5},
-            {'name': 'Automation Master', 'description': 'Reach 100 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 100},
-            {'name': 'Super Clicker', 'description': 'Tap the button 50 times', 'completed': False, 'criteria': lambda: self.resources >= 50},
-            {'name': 'Wealthy Tycoon', 'description': 'Reach 10,000 resources', 'completed': False, 'criteria': lambda: self.resources >= 10000},
-            {'name': 'Giga Tycoon', 'description': 'Reach 100,000 resources', 'completed': False, 'criteria': lambda: self.resources >= 100000},
-            {'name': 'Billionaire', 'description': 'Reach 1,000,000 resources', 'completed': False, 'criteria': lambda: self.resources >= 1000000},
-            {'name': 'Trillionaire', 'description': 'Reach 1,000,000,000 resources', 'completed': False, 'criteria': lambda: self.resources >= 1000000000},
-            # Time Milestones
-            {'name': 'First Minute', 'description': 'Play the game for 1 minute', 'completed': False, 'criteria': lambda: self.play_time >= 60},
-            {'name': 'First Hour', 'description': 'Play the game for 1 hour', 'completed': False, 'criteria': lambda: self.play_time >= 3600},
-            {'name': 'Overnight Tycoon', 'description': 'Play the game for 12 hours', 'completed': False, 'criteria': lambda: self.play_time >= 43200},
-            {'name': 'Long-Term Player', 'description': 'Play the game for 24 hours', 'completed': False, 'criteria': lambda: self.play_time >= 86400},
-            {'name': 'Hardcore Gamer', 'description': 'Play for 100 hours', 'completed': False, 'criteria': lambda: self.play_time >= 360000},
-            {'name': 'Endurance', 'description': 'Play the game for 500 hours', 'completed': False, 'criteria': lambda: self.play_time >= 1800000},
-            {'name': 'Binge Player', 'description': 'Play the game for 1,000 hours', 'completed': False, 'criteria': lambda: self.play_time >= 3600000},
-            # Clicks Milestones
-            {'name': 'Tap Addict', 'description': 'Tap the button 10 times', 'completed': False, 'criteria': lambda: self.resources >= 10},
-            {'name': 'Tap Mania', 'description': 'Tap the button 50 times', 'completed': False, 'criteria': lambda: self.resources >= 50},
-            {'name': 'Tap King', 'description': 'Tap the button 100 times', 'completed': False, 'criteria': lambda: self.resources >= 100},
-            {'name': 'Clicker Extraordinaire', 'description': 'Tap the button 200 times', 'completed': False, 'criteria': lambda: self.resources >= 200},
-            {'name': 'Tap Champion', 'description': 'Tap the button 500 times', 'completed': False, 'criteria': lambda: self.resources >= 500},
-            {'name': 'Tap Master', 'description': 'Tap the button 1,000 times', 'completed': False, 'criteria': lambda: self.resources >= 1000},
-            {'name': 'Clicking Machine', 'description': 'Tap the button 5,000 times', 'completed': False, 'criteria': lambda: self.resources >= 5000},
-            {'name': 'Tapper of the Year', 'description': 'Tap the button 10,000 times', 'completed': False, 'criteria': lambda: self.resources >= 10000},
-            # RPS Milestones
-            {'name': 'Steady Income', 'description': 'Reach 1 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 1},
-            {'name': 'RPS Boost', 'description': 'Reach 10 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 10},
-            {'name': 'RPS Pro', 'description': 'Reach 50 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 50},
-            {'name': 'Automation Boss', 'description': 'Reach 100 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 100},
-            {'name': 'RPS Overload', 'description': 'Reach 500 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 500},
-            {'name': 'Giga RPS', 'description': 'Reach 1,000 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 1000},
-            {'name': 'Supercharge', 'description': 'Reach 5,000 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 5000},
-            {'name': 'Automation Overlord', 'description': 'Reach 10,000 RPS', 'completed': False, 'criteria': lambda: self.resources_per_second >= 10000},
-            # Upgrade Milestones
-            {'name': 'Upgrade Junkie', 'description': 'Buy 5 upgrades', 'completed': False, 'criteria': lambda: self.upgrades_bought >= 5},
-            {'name': 'Upgrade Enthusiast', 'description': 'Buy 10 upgrades', 'completed': False, 'criteria': lambda: self.upgrades_bought >= 10},
-            {'name': 'Upgrade Investor', 'description': 'Buy 50 upgrades', 'completed': False, 'criteria': lambda: self.upgrades_bought >= 50},
-            {'name': 'Upgrade Master', 'description': 'Buy 100 upgrades', 'completed': False, 'criteria': lambda: self.upgrades_bought >= 100},
-            {'name': 'Upgrade King', 'description': 'Buy 500 upgrades', 'completed': False, 'criteria': lambda: self.upgrades_bought >= 500},
-            {'name': 'First Mega Upgrade', 'description': 'Buy your first mega upgrade', 'completed': False, 'criteria': lambda: self.upgrades_bought >= 1},
-            {'name': 'Super Upgrader', 'description': 'Spend 1,000 resources on upgrades', 'completed': False, 'criteria': lambda: self.resources_spent_on_upgrades >= 1000},
-            {'name': 'Upgrade God', 'description': 'Spend 10,000 resources on upgrades', 'completed': False, 'criteria': lambda: self.resources_spent_on_upgrades >= 10000},
-            {'name': 'Resource Overhaul', 'description': 'Max out an upgrade', 'completed': False, 'criteria': lambda: self.upgrades_maxed_out >= 1},
-            # Achievement Unlocked
-            {'name': 'Achievement Hunter', 'description': 'Unlock 10 achievements', 'completed': False, 'criteria': lambda: len(self.unlocked_achievements) >= 10},
-            {'name': 'Master of Achievements', 'description': 'Unlock 50 achievements', 'completed': False, 'criteria': lambda: len(self.unlocked_achievements) >= 50},
-            {'name': 'Achievement Expert', 'description': 'Unlock 100 achievements', 'completed': False, 'criteria': lambda: len(self.unlocked_achievements) >= 100},
-            {'name': 'Achievement Conqueror', 'description': 'Unlock 200 achievements', 'completed': False, 'criteria': lambda: len(self.unlocked_achievements) >= 200},
-            {'name': 'Ultimate Achievement', 'description': 'Unlock every single achievement', 'completed': False, 'criteria': lambda: len(self.unlocked_achievements) == 200},
-            # Time-based Achievements
-            {'name': 'First Automation', 'description': 'Automate resource generation for 1 minute', 'completed': False, 'criteria': lambda: self.automation_time >= 60},
-            {'name': '10-Minute Automation', 'description': 'Automate resource generation for 10 minutes', 'completed': False, 'criteria': lambda: self.automation_time >= 600},
-            {'name': '30-Minute Automation', 'description': 'Automate resource generation for 30 minutes', 'completed': False, 'criteria': lambda: self.automation_time >= 1800},
-            {'name': '1-Hour Automation', 'description': 'Automate resource generation for 1 hour', 'completed': False, 'criteria': lambda: self.automation_time >= 3600},
-            {'name': '2-Hour Automation', 'description': 'Automate resource generation for 2 hours', 'completed': False, 'criteria': lambda: self.automation_time >= 7200},
-            {'name': '4-Hour Automation', 'description': 'Automate resource generation for 4 hours', 'completed': False, 'criteria': lambda: self.automation_time >= 14400},
-            {'name': '8-Hour Automation', 'description': 'Automate resource generation for 8 hours', 'completed': False, 'criteria': lambda: self.automation_time >= 28800},
-            {'name': '12-Hour Automation', 'description': 'Automate resource generation for 12 hours', 'completed': False, 'criteria': lambda: self.automation_time >= 43200},
-            {'name': '24-Hour Automation', 'description': 'Automate resource generation for 24 hours', 'completed': False, 'criteria': lambda: self.automation_time >= 86400}
-        ]
+    # Resource Milestones
+    {'name': 'First Tap', 'description': 'Tap the button for the first time', 'completed': False, 'criteria': lambda: self.game_ref.player_resources > 0},
+    {'name': 'Rookie', 'description': 'Reach 100 resources', 'completed': False, 'criteria': lambda: self.game_ref.player_resources >= 100},
+    {'name': 'Millionaire', 'description': 'Reach 1,000 resources', 'completed': False, 'criteria': lambda: self.game_ref.player_resources >= 1000},
+    {'name': 'Income Boost', 'description': 'Reach 5 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 5},
+    {'name': 'Automation Master', 'description': 'Reach 100 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 100},
+    {'name': 'Super Clicker', 'description': 'Tap the button 50 times', 'completed': False, 'criteria': lambda: self.game_ref.total_clicks >= 50},
+    {'name': 'Wealthy Tycoon', 'description': 'Reach 10,000 resources', 'completed': False, 'criteria': lambda: self.game_ref.player_resources >= 10000},
+    {'name': 'Giga Tycoon', 'description': 'Reach 100,000 resources', 'completed': False, 'criteria': lambda: self.game_ref.player_resources >= 100000},
+    {'name': 'Billionaire', 'description': 'Reach 1,000,000 resources', 'completed': False, 'criteria': lambda: self.game_ref.player_resources >= 1000000},
+    {'name': 'Trillionaire', 'description': 'Reach 1,000,000,000 resources', 'completed': False, 'criteria': lambda: self.game_ref.player_resources >= 1000000000},
 
-    def update_play_time(self, dt):
-        self.play_time += 1  # Increment play_time by 1 every second
+    # Time Milestones
+    {'name': 'First Minute', 'description': 'Play the game for 1 minute', 'completed': False, 'criteria': lambda: self.game_ref.play_time >= 60},
+    {'name': 'First Hour', 'description': 'Play the game for 1 hour', 'completed': False, 'criteria': lambda: self.game_ref.play_time >= 3600},
+    {'name': 'Overnight Tycoon', 'description': 'Play the game for 12 hours', 'completed': False, 'criteria': lambda: self.game_ref.play_time >= 43200},
+    {'name': 'Long-Term Player', 'description': 'Play the game for 24 hours', 'completed': False, 'criteria': lambda: self.game_ref.play_time >= 86400},
+    {'name': 'Hardcore Gamer', 'description': 'Play for 100 hours', 'completed': False, 'criteria': lambda: self.game_ref.play_time >= 360000},
+    {'name': 'Endurance', 'description': 'Play the game for 500 hours', 'completed': False, 'criteria': lambda: self.game_ref.play_time >= 1800000},
+    {'name': 'Binge Player', 'description': 'Play the game for 1,000 hours', 'completed': False, 'criteria': lambda: self.game_ref.play_time >= 3600000},
 
-    def update_automation_time(self, dt):
-        self.automation_time += 1  # Increment automation_time by 1 every second
+    # Clicks Milestones
+    {'name': 'Tap Addict', 'description': 'Tap the button 10 times', 'completed': False, 'criteria': lambda: self.game_ref.total_clicks >= 10},
+    {'name': 'Tap Mania', 'description': 'Tap the button 50 times', 'completed': False, 'criteria': lambda: self.game_ref.total_clicks >= 50},
+    {'name': 'Tap King', 'description': 'Tap the button 100 times', 'completed': False, 'criteria': lambda: self.game_ref.total_clicks >= 100},
+    {'name': 'Clicker Extraordinaire', 'description': 'Tap the button 200 times', 'completed': False, 'criteria': lambda: self.game_ref.total_clicks >= 200},
+    {'name': 'Tap Champion', 'description': 'Tap the button 500 times', 'completed': False, 'criteria': lambda: self.game_ref.total_clicks >= 500},
+    {'name': 'Tap Master', 'description': 'Tap the button 1,000 times', 'completed': False, 'criteria': lambda: self.game_ref.total_clicks >= 1000},
+    {'name': 'Clicking Machine', 'description': 'Tap the button 5,000 times', 'completed': False, 'criteria': lambda: self.game_ref.total_clicks >= 5000},
+    {'name': 'Tapper of the Year', 'description': 'Tap the button 10,000 times', 'completed': False, 'criteria': lambda: self.game_ref.total_clicks >= 10000},
+
+    # RPS Milestones
+    {'name': 'Steady Income', 'description': 'Reach 1 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 1},
+    {'name': 'RPS Boost', 'description': 'Reach 10 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 10},
+    {'name': 'RPS Pro', 'description': 'Reach 50 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 50},
+    {'name': 'Automation Boss', 'description': 'Reach 100 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 100},
+    {'name': 'RPS Overload', 'description': 'Reach 500 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 500},
+    {'name': 'Giga RPS', 'description': 'Reach 1,000 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 1000},
+    {'name': 'Supercharge', 'description': 'Reach 5,000 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 5000},
+    {'name': 'Automation Overlord', 'description': 'Reach 10,000 RPS', 'completed': False, 'criteria': lambda: self.game_ref.player_rps >= 10000},
+
+    # Upgrade Milestones
+    {'name': 'Upgrade Junkie', 'description': 'Buy 5 upgrades', 'completed': False, 'criteria': lambda: self.game_ref.upgrades_bought >= 5},
+    {'name': 'Upgrade Enthusiast', 'description': 'Buy 10 upgrades', 'completed': False, 'criteria': lambda: self.game_ref.upgrades_bought >= 10},
+    {'name': 'Upgrade Investor', 'description': 'Buy 50 upgrades', 'completed': False, 'criteria': lambda: self.game_ref.upgrades_bought >= 50},
+    {'name': 'Upgrade Master', 'description': 'Buy 100 upgrades', 'completed': False, 'criteria': lambda: self.game_ref.upgrades_bought >= 100},
+    {'name': 'Upgrade King', 'description': 'Buy 500 upgrades', 'completed': False, 'criteria': lambda: self.game_ref.upgrades_bought >= 500},
+    {'name': 'First Mega Upgrade', 'description': 'Buy your first mega upgrade', 'completed': False, 'criteria': lambda: self.game_ref.upgrades_bought >= 1},
+    {'name': 'Super Upgrader', 'description': 'Spend 1,000 resources on upgrades', 'completed': False, 'criteria': lambda: self.game_ref.resources_spent_on_upgrades >= 1000},
+    {'name': 'Upgrade God', 'description': 'Spend 10,000 resources on upgrades', 'completed': False, 'criteria': lambda: self.game_ref.resources_spent_on_upgrades >= 10000},
+    {'name': 'Resource Overhaul', 'description': 'Max out an upgrade', 'completed': False, 'criteria': lambda: self.game_ref.upgrades_maxed_out >= 1},
+
+    # Achievement Unlocked
+    {'name': 'Achievement Hunter', 'description': 'Unlock your first achievement', 'completed': False, 'criteria': lambda: len(self.game_ref.achievements_unlocked) >= 1},
+]
+
+    
+    def on_enter(self):
+        """Called when entering this screen."""
+        if self.game_ref:
+            print(f"Resources from GameState: {self.game_ref.player_resources}")  # Print the current resource count
+        else:
+            print("No game reference provided!")
 
     def on_click(self, instance):
-        self.resources += self.income
-        self.update_labels()
+        """Handle click event."""
+      
+        if self.game_ref:
+            self.game_ref.player_resources += self.game_ref.rpc  # Add resources per click
+            self.game_ref.total_clicks += 1  # Increment total clicks
+            self.game_ref.resources_earned += self.game_ref.rpc  # Track resources earned per click
+            self.game_ref.resources_spent += self.game_ref.rpc  # Track resources spent per click
+            self.update_ui()  # Update UI with new resource values
 
-        # Apply animation only once when the button is clicked.
-        if not hasattr(instance, 'is_animating') or not instance.is_animating:
-            instance.is_animating = True  # Mark that the button is animating
-            
-            # Ensure the button does not affect the layout or cause movement
-            with instance.canvas.before:
-                # Fix the position and make sure the button doesn't shift the layout
-                instance.original_pos = instance.pos
-                instance.original_size = instance.size
+            # Button animation logic
+            if not hasattr(instance, 'is_animating') or not instance.is_animating:
+                instance.is_animating = True
+                anim = Animation(size=(instance.width * 1.2, instance.height * 1.2), duration=0.2) + \
+                    Animation(size=(instance.size[0], instance.size[1]), duration=0.2)
+                anim.start(instance)
 
-            anim = Animation(size=(instance.width * 1.2, instance.height * 1.2), duration=0.2) + \
-                Animation(size=(instance.original_size[0], instance.original_size[1]), duration=0.2)
-            anim.start(instance)
+                # Once animation is done, reset the animation flag
+                anim.bind(on_complete=lambda *args: setattr(instance, 'is_animating', False))
 
-            # Once animation is done, reset the animation flag
-            anim.bind(on_complete=lambda *args: setattr(instance, 'is_animating', False))
+            self.check_achievements()  # Check for achievement unlocks
 
     def auto_generate_resources(self, dt):
-        self.resources += self.resources_per_second
-        self.update_labels()
+        """Automatically generate resources every second based on RPS."""
+        if self.game_ref:
+            self.game_ref.player_resources += self.game_ref.player_rps  # Add resources per second
+            self.update_ui()  # Update UI after automatic resource generation
+            self.check_achievements()  # Check for achievement unlocks
 
-    def update_labels(self):
-        self.resource_label.text = f'Resources: {self.resources}'
-        self.rps_label.text = f'RPS: {self.resources_per_second}'
-        self.check_achievements()
+    def update_play_time(self, dt):
+        """Increment play time every second."""
+        self.game_ref.play_time += 1  # Increment play_time by 1 every second
+        self.check_achievements()  # Check for achievement unlocks
+
+    def update_ui(self):
+        """Update the UI elements such as resource count and RPS."""
+        if self.game_ref:
+            self.resource_label.text = f'Resources: {self.game_ref.player_resources}'
+            self.rps_label.text = f'RPS: {self.game_ref.player_rps}'
 
     def check_achievements(self):
+        """Check if any achievements should be unlocked based on the current game state."""
         for achievement in self.achievements:
             if not achievement['completed'] and achievement['criteria']():
                 achievement['completed'] = True
-                if achievement['name'] not in self.unlocked_achievements:
-                    self.unlocked_achievements.append(achievement['name'])  # Track unlocked achievements
+                if achievement['name'] not in self.game_ref.achievements_unlocked:
+                    self.game_ref.achievements_unlocked.append(achievement['name'])
                     self.show_achievement_popup(achievement)
 
     def show_achievement_popup(self, achievement):
+        """Display the achievement popup."""
         popup = Popup(title='Achievement Unlocked',
                       content=Label(text=f"Congratulations! You unlocked: {achievement['name']}\n\n{achievement['description']}"),
                       size_hint=(0.8, 0.4))
         popup.open()
+
 class UpgradeScreen(Screen):
+    game_ref = ObjectProperty(None)  # Declare game_ref as an ObjectProperty
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.game_ref = kwargs.get('game_ref', None)
+        print("game ref", self.game_ref)
         self.upgrades = [
     {'name': 'Oil', "Description": "Well oiled machines just work better", 'cost': 10, 'rps': 1},
     {'name': 'Workers', "Description": "Hire more workers", 'cost': 50, 'rps': 5},
@@ -254,8 +263,27 @@ class UpgradeScreen(Screen):
         root_layout.add_widget(scroll)
         self.add_widget(root_layout)
 
+    def buy_upgrade(self, upgrade, buy_button):
+        if not self.game_ref:
+            print("Error: game_ref is not properly initialized.")
+            return
+        
+        player_resources = self.game_ref.player_resources
+        player_rps = self.game_ref.player_rps
+        print(player_resources, player_rps)
+        
+        if player_resources >= upgrade['cost']:
+            self.game_ref.player_resources -= upgrade['cost']
+            self.game_ref.player_rps += upgrade['rps']
+            buy_button.disabled = True
+            buy_button.text = f"Purchased {upgrade['name']}"
+            print(f"Upgraded! New Resources: {self.game_ref.player_resources}, New RPS: {self.game_ref.player_rps}")
+        else:
+            print("Not enough resources to buy this upgrade.")
+
 
 class BuyUpgradesScreen(Screen):
+    game_ref = ObjectProperty(None)  # Declare game_ref as an ObjectPropert
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
@@ -307,6 +335,7 @@ class BuyUpgradesScreen(Screen):
 from kivy.uix.scrollview import ScrollView
 
 class AchievementsScreen(Screen):
+    game_ref = ObjectProperty(None)  # Declare game_ref as an ObjectPropert
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
@@ -351,25 +380,44 @@ class AchievementsScreen(Screen):
 
 class IdleClickerApp(App):
     def build(self):
+        game_state = GameState()  # This is your game state
+
         self.title = "Idle Factory Clicker"
         screen_manager = ScreenManager()
 
-        screen_manager.add_widget(TapToEarnScreen(name='tap_screen'))
-        screen_manager.add_widget(UpgradeScreen(name='upgrade_screen'))
-        screen_manager.add_widget(BuyUpgradesScreen(name='buy_upgrade_screen'))
-        screen_manager.add_widget(AchievementsScreen(name='achievements_screen'))
+        # Initialize TapToEarnScreen as `tap_screen`
+        tap_to_earn_screen = TapToEarnScreen(name='tap_screen', game_ref=game_state)
+        tap_to_earn_screen.game_ref = game_state  # Set the game_ref property after initialization
+        screen_manager.add_widget(tap_to_earn_screen)
 
+        # Create StatsScreen, passing `game_state` as game_ref
+        stats_screen = StatsScreen(name='stats', game_ref=game_state)
+        screen_manager.add_widget(stats_screen)
+
+        # Create UpgradeScreen, passing `game_state` as game_ref
+        upgrade_screen = UpgradeScreen(name='upgrade_screen', game_ref=game_state)
+        screen_manager.add_widget(upgrade_screen)
+
+        # Create other screens (e.g., BuyUpgradesScreen, AchievementsScreen)
+        buy_upgrades_screen = BuyUpgradesScreen(name='buy_upgrade_screen', game_ref=game_state)
+        achievements_screen = AchievementsScreen(name='achievements_screen', game_ref=game_state)
+        screen_manager.add_widget(buy_upgrades_screen)
+        screen_manager.add_widget(achievements_screen)
+
+        # Tabs for navigation
         tabs = BoxLayout(size_hint=(1, None), height=50)
         for label, screen in [
             ('Tap to Earn', 'tap_screen'),
             ('Upgrades', 'upgrade_screen'),
             ('Buy Upgrade', 'buy_upgrade_screen'),
-            ('Achievements', 'achievements_screen')
+            ('Achievements', 'achievements_screen'),
+            ('Stats', 'stats'),
         ]:
             button = Button(text=label, size_hint=(None, 1), width=150, background_color=ACCENT_COLOR)
             button.bind(on_release=lambda btn, s=screen: self.switch_screen(screen_manager, s))
             tabs.add_widget(button)
 
+        # Set up container for the screen manager with some layout and styling
         bordered_container = FloatLayout()
 
         with bordered_container.canvas.before:
@@ -393,11 +441,94 @@ class IdleClickerApp(App):
         root = BoxLayout(orientation='vertical')
         root.add_widget(tabs)
         root.add_widget(bordered_container)
+
         return root
 
     def switch_screen(self, manager, name):
         manager.current = name
 
+
+
+class StatsScreen(Screen):
+    game_ref = ObjectProperty(None)  # Declare game_ref as an ObjectProperty
+    def __init__(self, game_ref, **kwargs):
+        super(StatsScreen, self).__init__(**kwargs)
+        self.game = game_ref  # Store reference to TapToEarnScreen
+
+        # Layout setup
+        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        self.stats_labels = {}
+
+        title = Label(text="[b]Game Statistics[/b]", markup=True, font_size=28, size_hint=(1, 0.1), color=TEXT_COLOR)
+        self.layout.add_widget(title)
+
+        stats = [
+            "Factories Clicked",
+            "Time Played (sec)",
+            "Resources Earned",
+            "Resources Spent",
+            "Resources Per Second",
+            "Resources Per Click",
+            "Manual Clicks",
+            "Clicks Per Minute",
+            "Upgrades Bought",
+            "Achievements Unlocked",
+            "Automation Time (sec)",
+            "Auto-Generated Resources"
+        ]
+
+        # Create stat labels for each statistic
+        for stat in stats:
+            label = Label(text=f"{stat}: 0", font_size=18, color=TEXT_COLOR)
+            self.stats_labels[stat] = label
+            self.layout.add_widget(label)
+
+        self.add_widget(self.layout)
+        Clock.schedule_interval(self.update_stats, 1)  # Update every second
+
+    def update_stats(self, dt):
+        # Access game data from TapToEarnScreen
+        total_clicks = self.game.total_clicks
+        play_time = self.game.play_time
+        resources_earned = self.game.resources_earned
+        resources_spent = self.game.resources_spent
+        rps = self.game.rps
+        rpc = self.game.rpc
+        upgrades_bought = self.game.upgrades_bought
+        achievements_unlocked = self.game.achievements_unlocked
+        automation_time = self.game.automation_time
+        auto_generated_resources = self.game.auto_generated_resources
+
+        # Update stats on the screen
+        self.stats_labels["Factories Clicked"].text = f"Factories Clicked: {total_clicks}"
+        self.stats_labels["Time Played (sec)"].text = f"Time Played (sec): {play_time}"
+        self.stats_labels["Resources Earned"].text = f"Resources Earned: {resources_earned}"
+        self.stats_labels["Resources Spent"].text = f"Resources Spent: {resources_spent}"
+        self.stats_labels["Resources Per Second"].text = f"Resources Per Second: {rps}"
+        self.stats_labels["Resources Per Click"].text = f"Resources Per Click: {rpc}"
+        self.stats_labels["Manual Clicks"].text = f"Manual Clicks: {total_clicks}"
+        self.stats_labels["Clicks Per Minute"].text = f"Clicks Per Minute: {total_clicks / play_time * 60 if play_time > 0 else 0}"
+        self.stats_labels["Upgrades Bought"].text = f"Upgrades Bought: {upgrades_bought}"
+        self.stats_labels["Achievements Unlocked"].text = f"Achievements Unlocked: {achievements_unlocked}"
+        self.stats_labels["Automation Time (sec)"].text = f"Automation Time (sec): {automation_time}"
+        self.stats_labels["Auto-Generated Resources"].text = f"Auto-Generated Resources: {auto_generated_resources}"
+
+class GameState:
+    def __init__(self):
+        self.player_resources = 0  # Example resource count
+        self.player_rps = 0  # Example Resources Per Second (RPS)
+        self.total_clicks = 0
+        self.play_time = 0
+        self.resources_earned = 0
+        self.resources_spent = 0
+        self.rps = 0
+        self.rpc = 1
+        self.upgrades_bought = 0
+        self.achievements_unlocked = []
+        self.automation_time = 0
+        self.auto_generated_resources = 0
+        self.resources_spent_on_upgrades = 0  # <-- Add this line to track resources spent on upgrades
+        self.upgrades_maxed_out = 0  # <-- This may already exist, but if not, you can add it here as well
 
 if __name__ == '__main__':
     IdleClickerApp().run()
