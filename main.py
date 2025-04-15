@@ -173,23 +173,72 @@ class UpgradeScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.upgrades = [
-            {'name': 'Oil', "Description" : "Well oiled machines just work better", 'cost': 10, 'rps': 1},
-            {'name': 'Workers', "Description" : "Hire more workers",'cost': 50, 'rps': 5},
-            {'name': 'Machinery', "Description" : "Buy more machinery",'cost': 200, 'rps': 20},
-            {'name': 'Overtime', "Description" : "More work more results right?",'cost': 200, 'rps': 20},
-            {'name': 'Accommodation', "Description" : "No better place to sleep than work",'cost': 200, 'rps': 20},
-            {'name': 'Fuel inflation', "Description" : "If you can't afford to go home may as well work right?",'cost': 200, 'rps': 20},
-            {'name': 'Energy drinks', "Description" : "CAFFFIIINEEEE",'cost': 200, 'rps': 20}
-        ]
+    {'name': 'Oil', "Description": "Well oiled machines just work better", 'cost': 10, 'rps': 1},
+    {'name': 'Workers', "Description": "Hire more workers", 'cost': 50, 'rps': 5},
+    {'name': 'Machinery', "Description": "Buy more machinery", 'cost': 200, 'rps': 20},
+    {'name': 'Overtime', "Description": "More work more results right?", 'cost': 400, 'rps': 35},
+    {'name': 'Accommodation', "Description": "No better place to sleep than work", 'cost': 800, 'rps': 50},
+    {'name': 'Fuel Inflation', "Description": "If you can't afford to go home, may as well work", 'cost': 1600, 'rps': 70},
+    {'name': 'Energy Drinks', "Description": "CAFFFIIINEEEE", 'cost': 2500, 'rps': 100},
+    {'name': 'Motivational Posters', "Description": "‘Hang in there!’ does wonders", 'cost': 3200, 'rps': 120},
+    {'name': 'AI Surveillance', "Description": "Smile! You're being productive", 'cost': 4200, 'rps': 140},
+    {'name': 'Forced Team Building', "Description": "Bond or be fired", 'cost': 5400, 'rps': 160},
+    {'name': 'Productivity Charts', "Description": "Guilt graphs", 'cost': 6800, 'rps': 180},
+    {'name': 'Broken Vending Machines', "Description": "Frustration fuels output", 'cost': 8400, 'rps': 210},
+    {'name': 'Invisible Bonuses', "Description": "They're totally coming next quarter", 'cost': 10000, 'rps': 240},
+    {'name': 'Intern Army', "Description": "Cheap, eager, and expendable", 'cost': 12000, 'rps': 280},
+    {'name': 'Management Retreats', "Description": "They get rest. You get deadlines", 'cost': 14500, 'rps': 320},
+    {'name': 'Mandatory Smiles', "Description": "Frown and you're gone", 'cost': 17500, 'rps': 360},
+    {'name': 'Ergonomic Hazards', "Description": "Pain builds character", 'cost': 21000, 'rps': 400},
+    {'name': 'Offshore Automation', "Description": "Work never sleeps", 'cost': 25000, 'rps': 450},
+    {'name': 'Broken Clocks', "Description": "No end in sight", 'cost': 30000, 'rps': 500},
+    {'name': 'Micromanagers', "Description": "Hovering increases efficiency", 'cost': 36000, 'rps': 560},
+    {'name': 'Heat Lamps', "Description": "Keep the pressure high (literally)", 'cost': 43000, 'rps': 620},
+    {'name': 'Hope Reduction Plan', "Description": "Less hope, more grind", 'cost': 50000, 'rps': 680},
+    {'name': 'Unpaid Breaks', "Description": "Rest is for the weak", 'cost': 58000, 'rps': 750},
+    {'name': 'Industrial Coffee', "Description": "Jet fuel for humans", 'cost': 67000, 'rps': 820},
+    {'name': 'Paperwork Avalanche', "Description": "Buried in bureaucracy", 'cost': 77000, 'rps': 900},
+    {'name': 'Middle Management', "Description": "A layer of confusion", 'cost': 88000, 'rps': 980},
+    {'name': 'Wall Clocks Removed', "Description": "Time is an illusion", 'cost': 100000, 'rps': 1060},
+    {'name': 'Cubicle Compression', "Description": "More bodies per square meter", 'cost': 113000, 'rps': 1150},
+    {'name': 'Broken Air Conditioning', "Description": "Sweat faster, produce faster", 'cost': 127000, 'rps': 1240},
+    {'name': 'Overtime Denial', "Description": "More hours, same pay", 'cost': 143000, 'rps': 1340},
+    {'name': 'Closed Windows', "Description": "Trapped like profits", 'cost': 160000, 'rps': 1440},
+    {'name': 'Motivational Whistles', "Description": "One tweet = one task", 'cost': 180000, 'rps': 1550},
+    {'name': 'Digital Distractions Blocker', "Description": "No memes, no mercy", 'cost': 200000, 'rps': 1660},
+    {'name': 'Overseer Drone', "Description": "Always watching", 'cost': 225000, 'rps': 1780},
+    {'name': 'Silent Alarm System', "Description": "For unproductive thoughts", 'cost': 250000, 'rps': 1900},
+    {'name': 'Mandatory Chanting', "Description": "Unity breeds output", 'cost': 280000, 'rps': 2030},
+    {'name': 'Noise-Canceling Walls', "Description": "No complaints escape", 'cost': 310000, 'rps': 2160},
+    {'name': 'Vitamin IV Drips', "Description": "Sleep is obsolete", 'cost': 345000, 'rps': 2300},
+    {'name': '24-Hour Shifts', "Description": "Time is money, sleep is theft", 'cost': 380000, 'rps': 2440},
+    {'name': 'Biometric Check-ins', "Description": "Track every second", 'cost': 420000, 'rps': 2590},
+    {'name': 'Fire-the-bottom-10%', "Description": "Motivation by fear", 'cost': 460000, 'rps': 2740},
+    {'name': 'Optimized Pathways', "Description": "No time wasted walking", 'cost': 505000, 'rps': 2900},
+    {'name': 'Task Implants', "Description": "Work... hardwired", 'cost': 550000, 'rps': 3060},
+    {'name': 'Loyalty Scoring', "Description": "Work more, rank higher", 'cost': 600000, 'rps': 3230},
+    {'name': 'Workplace Anthem', "Description": "Sing before you clock in", 'cost': 655000, 'rps': 3400},
+    {'name': 'Drone Delivery Lines', "Description": "Zero downtime", 'cost': 710000, 'rps': 3580},
+    {'name': 'Factory Religion', "Description": "Worship the grind", 'cost': 775000, 'rps': 3760},
+    {'name': 'Nano Efficiency Protocol', "Description": "Micromanagement perfected", 'cost': 840000, 'rps': 3950}
+]
 
-        self.layout = GridLayout(cols=5, padding=20, spacing=10, row_default_height=50)
+        # Outer layout
+        root_layout = BoxLayout(orientation='vertical')
 
+        # Scrollable area
+        scroll = ScrollView(size_hint=(1, 1))
+        self.layout = GridLayout(cols=5, padding=20, spacing=10, row_default_height=50, size_hint_y=None)
+        self.layout.bind(minimum_height=self.layout.setter('height'))  # Dynamic height based on content
+
+        # Headers
         self.layout.add_widget(Label(text="Upgrade Name", color=TEXT_COLOR))
         self.layout.add_widget(Label(text="Description", color=TEXT_COLOR))
         self.layout.add_widget(Label(text="Cost", color=TEXT_COLOR))
         self.layout.add_widget(Label(text="RPS", color=TEXT_COLOR))
         self.layout.add_widget(Label(text="Buy", color=TEXT_COLOR))
 
+        # Upgrade rows
         for upgrade in self.upgrades:
             self.layout.add_widget(Label(text=f"[b]{upgrade['name']}[/b]", markup=True, font_size=18, color=TEXT_COLOR))
             self.layout.add_widget(Label(text=upgrade['Description'], font_size=14, color=TEXT_COLOR))
@@ -198,23 +247,12 @@ class UpgradeScreen(Screen):
 
             buy_button = Button(text=f"Buy {upgrade['name']}", size_hint=(None, None), size=(150, 50), background_color=ACCENT_COLOR)
             buy_button.bind(on_press=lambda btn, u=upgrade: self.buy_upgrade(u, buy_button))
-            
-            upgrade['buy_button'] = buy_button  # Store the button in the upgrade dictionary
+            upgrade['buy_button'] = buy_button
             self.layout.add_widget(buy_button)
 
-        self.add_widget(self.layout)
-
-    def buy_upgrade(self, upgrade, buy_button):
-        tap_screen = self.manager.get_screen('tap_screen')
-        if tap_screen.resources >= upgrade['cost']:
-            tap_screen.resources -= upgrade['cost']
-            tap_screen.resources_per_second += upgrade['rps']
-            tap_screen.update_labels()
-
-            # Animate the size of the button once (expand then return to normal)
-            anim = Animation(size=(buy_button.width * 1.1, buy_button.height * 1.1), duration=0.2)  # Expand
-            anim += Animation(size=(buy_button.width, buy_button.height), duration=0.2)  # Return to normal size
-            anim.start(buy_button)  # Apply the animation to the buy_button
+        scroll.add_widget(self.layout)
+        root_layout.add_widget(scroll)
+        self.add_widget(root_layout)
 
 
 class BuyUpgradesScreen(Screen):
