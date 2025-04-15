@@ -4,11 +4,11 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
-from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
-from kivy.uix.floatlayout import FloatLayout
 from kivy.clock import Clock
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
+from kivy.graphics import Color, RoundedRectangle
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.relativelayout import RelativeLayout
 kivy.require('1.11.1')
@@ -16,23 +16,50 @@ kivy.require('1.11.1')
 THEME_BG = (0.1, 0.1, 0.1, 1)
 TEXT_COLOR = (1, 1, 1, 1)
 ACCENT_COLOR = (1, 0.5, 0, 1)
+GRAY_BORDER = (0.3, 0.3, 0.3, 1)  # Gray color for the border
 
-
-class TapToEarnScreen(Screen):
+class BorderScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        layout = FloatLayout()
+
+        with self.canvas.before:
+            # Fill entire background with gray
+            Color(*GRAY_BORDER)
+            self.bg = RoundedRectangle(radius=[0])
+
+            # Draw black "screen" area with rounded corners inset from the edges
+            Color(0, 0, 0, 1)
+            self.inner = RoundedRectangle(radius=[50])
+
+        self.bind(size=self.update_border, pos=self.update_border)
+
+    def update_border(self, *args):
+        # Full screen gray background
+        self.bg.pos = self.pos
+        self.bg.size = self.size
+
+        # Inset black screen to simulate a rounded "container"
+        padding = 20
+        self.inner.pos = (self.x + padding, self.y + padding)
+        self.inner.size = (self.width - 2 * padding, self.height - 2 * padding)
+
+
+
+
+
+class TapToEarnScreen(BorderScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=20, spacing=20)
 
         self.resources = 0
         self.income = 1
         self.resources_per_second = 0
 
-        self.resource_label = Label(text=f'Resources: {self.resources}', font_size=24, color=TEXT_COLOR,
-                                     size_hint=(None, None), size=(300, 50), pos_hint={'center_x': 0.5, 'top': 0.9})
+        self.resource_label = Label(text=f'Resources: {self.resources}', font_size=24, color=TEXT_COLOR)
         layout.add_widget(self.resource_label)
 
-        self.rps_label = Label(text=f'RPS: {self.resources_per_second}', font_size=20, color=TEXT_COLOR,
-                               size_hint=(None, None), size=(300, 50), pos_hint={'center_x': 0.5, 'top': 0.85})
+        self.rps_label = Label(text=f'RPS: {self.resources_per_second}', font_size=20, color=TEXT_COLOR)
         layout.add_widget(self.rps_label)
 
         # Factory image as a button (use your own image file)
@@ -40,7 +67,7 @@ class TapToEarnScreen(Screen):
             size_hint=(None, None), size=(200, 200),
             background_normal='Factory.png',
             background_down='Factory.png',
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            pos_hint={'center_x': 0.5}
         )
         self.icon_button.bind(on_press=self.on_click)
         layout.add_widget(self.icon_button)
@@ -61,7 +88,7 @@ class TapToEarnScreen(Screen):
         self.rps_label.text = f'RPS: {self.resources_per_second}'
 
 
-class UpgradeScreen(Screen):
+class UpgradeScreen(BorderScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.upgrades = [
@@ -74,50 +101,39 @@ class UpgradeScreen(Screen):
             {'name': 'Energy drinks', "Description" : "CAFFFIIINEEEE",'cost': 200, 'rps': 20}
         ]
 
-        # Main layout (BoxLayout) that centers everything vertically and horizontally
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=20, size_hint=(None, None), size=(800, 600))
-        layout.pos_hint = {'center_x': 0.5, 'center_y': 0.5}  # Center layout
-
-        # Title of the screen
-        layout.add_widget(Label(text="Upgrades", font_size=32, color=ACCENT_COLOR, size_hint_y=None, height=50))
-
-        # Creating a BoxLayout for the table-like structure
-        grid_layout = GridLayout(cols=5, padding=10, spacing=10, row_default_height=50, size_hint_y=None)
-        grid_layout.bind(minimum_height=grid_layout.setter('height'))  # Make gridLayout height flexible
+        # Creating a GridLayout for table-like structure
+        self.layout = GridLayout(cols=5, padding=10, spacing=10, row_default_height=50)
 
         # Create the header row
-        grid_layout.add_widget(Label(text="Upgrade Name", color=(1, 1, 1, 1), size_hint_y=None, height=40))
-        grid_layout.add_widget(Label(text="Description", color=(1, 1, 1, 1), size_hint_y=None, height=40))
-        grid_layout.add_widget(Label(text="Cost", color=(1, 1, 1, 1), size_hint_y=None, height=40))
-        grid_layout.add_widget(Label(text="RPS", color=(1, 1, 1, 1), size_hint_y=None, height=40))
-        grid_layout.add_widget(Label(text="Buy", color=(1, 1, 1, 1), size_hint_y=None, height=40))
+        self.layout.add_widget(Label(text="Upgrade Name", color=(1, 1, 1, 1), size_hint_y=None, height=40))
+        self.layout.add_widget(Label(text="Description", color=(1, 1, 1, 1), size_hint_y=None, height=40))
+        self.layout.add_widget(Label(text="Cost", color=(1, 1, 1, 1), size_hint_y=None, height=40))
+        self.layout.add_widget(Label(text="RPS", color=(1, 1, 1, 1), size_hint_y=None, height=40))
+        self.layout.add_widget(Label(text="Buy", color=(1, 1, 1, 1), size_hint_y=None, height=40))
 
-        # Add upgrade rows
         for upgrade in self.upgrades:
-            # Upgrade Name
+            # Add each upgrade's details in the grid
             name_label = Label(
                 text=f"[b]{upgrade['name']}[/b]",
                 markup=True,
                 font_size=18,
                 color=(1, 1, 1, 1),
                 halign='left',
-                valign='middle'  # Center vertically
+                valign='top'  # Top alignment to prevent space above text
             )
-            name_label.bind(size=name_label.setter('text_size'))  # Ensure text wrapping works
-            grid_layout.add_widget(name_label)
+            name_label.bind(size=name_label.setter('text_size'))  # Bind text_size to size
+            self.layout.add_widget(name_label)
 
-            # Description
             desc_label = Label(
                 text=upgrade['Description'],
                 font_size=14,
                 color=(0.9, 0.9, 0.9, 1),
                 halign='left',
-                valign='middle'  # Center vertically
+                valign='top'  # Top alignment to prevent space above text
             )
-            desc_label.bind(size=desc_label.setter('text_size'))  # Ensure text wrapping works
-            grid_layout.add_widget(desc_label)
+            desc_label.bind(size=desc_label.setter('text_size'))  # Bind text_size to size
+            self.layout.add_widget(desc_label)
 
-            # Cost
             cost_label = Label(
                 text=str(upgrade['cost']),
                 font_size=14,
@@ -125,9 +141,8 @@ class UpgradeScreen(Screen):
                 halign='center',
                 valign='middle'
             )
-            grid_layout.add_widget(cost_label)
+            self.layout.add_widget(cost_label)
 
-            # RPS
             rps_label = Label(
                 text=f"+{upgrade['rps']}",
                 font_size=14,
@@ -135,21 +150,17 @@ class UpgradeScreen(Screen):
                 halign='center',
                 valign='middle'
             )
-            grid_layout.add_widget(rps_label)
+            self.layout.add_widget(rps_label)
 
-            # Buy Button
-            buy_button = Button(
-                text=f"Buy {upgrade['name']}",
-                size_hint=(None, None),
-                size=(150, 50),
-                pos_hint={'center_x': 0.5}  # Center button horizontally
-            )
+            # Create the buy button with fixed height
+            buy_button = Button(text=f"Buy {upgrade['name']}", size_hint=(None, None), size=(150, 50))
             buy_button.bind(on_press=lambda btn, u=upgrade: self.buy_upgrade(u))
-            grid_layout.add_widget(buy_button)
 
-        # Add the grid layout to the main layout
-        layout.add_widget(grid_layout)
-        self.add_widget(layout)
+            # Centering button vertically
+            buy_button.valign = 'middle'  # Ensures that the button is vertically centered
+            self.layout.add_widget(buy_button)  # Add the buy button for each upgrade
+
+        self.add_widget(self.layout)
 
     def buy_upgrade(self, upgrade):
         tap_screen = self.manager.get_screen('tap_screen')  # Get the TapToEarnScreen
@@ -159,18 +170,16 @@ class UpgradeScreen(Screen):
             self.update_upgrade_labels()
 
     def update_upgrade_labels(self):
-        # No update needed here for this example; upgrades are updated immediately
+        # No need for this method in this case because the upgrades are updated immediately
         pass  # For this example, no update is required after purchase
 
 
-class BuyUpgradesScreen(Screen):
+class BuyUpgradesScreen(BorderScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        layout = FloatLayout()
+        layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
 
-        # Title centered at the top
-        layout.add_widget(Label(text="💰 Microtransactions", font_size=28, color=ACCENT_COLOR,
-                               size_hint=(None, None), size=(300, 50), pos_hint={'center_x': 0.5, 'top': 0.9}))
+        layout.add_widget(Label(text="💰 Microtransactions", font_size=28, color=ACCENT_COLOR))
 
         microtransactions = [
             {"name": "Golden Wrench", "desc": "Double RPS for 5 minutes", "effect": self.double_rps},
@@ -179,17 +188,12 @@ class BuyUpgradesScreen(Screen):
             {"name": "Support Dev", "desc": "Show some love (no real effect)", "effect": self.fake_thanks}
         ]
 
-        # Loop through the microtransactions and create each row
-        for idx, item in enumerate(microtransactions):
-            row = BoxLayout(orientation='horizontal', size_hint_y=None, height=50, spacing=10,
-                            size_hint=(None, None), size=(500, 50), pos_hint={'center_x': 0.5, 'top': 0.75 - (idx * 0.1)})
-
-            row.add_widget(Label(text=f"{item['name']}: {item['desc']}", font_size=14, color=TEXT_COLOR,
-                                 size_hint=(0.7, 1)))
-            btn = Button(text="Buy", size_hint=(None, None), size=(100, 50), background_color=ACCENT_COLOR)
+        for item in microtransactions:
+            row = BoxLayout(orientation='horizontal', size_hint_y=None, height=50, spacing=10)
+            row.add_widget(Label(text=f"{item['name']}: {item['desc']}", font_size=14, color=TEXT_COLOR))
+            btn = Button(text="Buy", size_hint=(None, 1), width=100, background_color=ACCENT_COLOR)
             btn.bind(on_press=lambda _, eff=item["effect"]: eff())
             row.add_widget(btn)
-
             layout.add_widget(row)
 
         self.add_widget(layout)
@@ -232,16 +236,17 @@ class IdleClickerApp(App):
         screen_manager.add_widget(UpgradeScreen(name='upgrade_screen'))
         screen_manager.add_widget(BuyUpgradesScreen(name='buy_upgrade_screen'))
 
-        tabs = TabbedPanel(do_default_tab=False, size_hint=(1, None), height=50)
+        # Remove the TabbedPanel and direct buttons to change screens
+        tabs = BoxLayout(size_hint=(1, None), height=50)
 
         for label, screen in [
             ('Tap to Earn', 'tap_screen'),
             ('Upgrades', 'upgrade_screen'),
             ('Buy Upgrade', 'buy_upgrade_screen')
         ]:
-            tab = TabbedPanelItem(text=label, size_hint=(None, 1), width=150)
-            tab.bind(on_release=lambda x, s=screen: self.switch_screen(screen_manager, s))
-            tabs.add_widget(tab)
+            button = Button(text=label, size_hint=(None, 1), width=150, background_color=ACCENT_COLOR)
+            button.bind(on_release=lambda btn, s=screen: self.switch_screen(screen_manager, s))
+            tabs.add_widget(button)
 
         root = BoxLayout(orientation='vertical')
         root.add_widget(tabs)
@@ -254,3 +259,4 @@ class IdleClickerApp(App):
 
 if __name__ == '__main__':
     IdleClickerApp().run()
+
