@@ -43,7 +43,6 @@ class TapToEarnScreen(Screen):
         layout.add_widget(self.icon_button)
 
         self.add_widget(layout)
-
         Clock.schedule_interval(self.auto_generate_resources, 1)
 
     def on_click(self, instance):
@@ -59,71 +58,110 @@ class TapToEarnScreen(Screen):
 class UpgradeScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
         self.upgrades = [
             {'name': 'Oil', "Description": "Well oiled machines just work better", 'cost': 10, 'rps': 1, 'owned': 0},
             {'name': 'Workers', "Description": "Hire more workers", 'cost': 50, 'rps': 5, 'owned': 0},
             {'name': 'Machinery', "Description": "Buy more machinery", 'cost': 200, 'rps': 20, 'owned': 0},
-            {'name': 'Overtime', "Description": "More work more results right?", 'cost': 200, 'rps': 20, 'owned': 0},
-            {'name': 'Accommodation', "Description": "No better place to sleep than work", 'cost': 200, 'rps': 20, 'owned': 0},
-            {'name': 'Fuel inflation', "Description": "If you can't afford to go home, may as well work right?", 'cost': 200, 'rps': 20, 'owned': 0},
-            {'name': 'Energy drinks', "Description": "CAFFFIIINEEEE", 'cost': 200, 'rps': 20, 'owned': 0}
+            {'name': 'Overtime', "Description": "More work more results right?", 'cost': 300, 'rps': 25, 'owned': 0},
+            {'name': 'Accommodation', "Description": "No better place to sleep than work", 'cost': 500, 'rps': 30, 'owned': 0},
+            {'name': 'Fuel inflation', "Description": "If you can't afford to go home may as well work right?", 'cost': 800, 'rps': 40, 'owned': 0},
+            {'name': 'Energy drinks', "Description": "CAFFFIIINEEEE", 'cost': 1000, 'rps': 50, 'owned': 0}
         ]
 
-        self.layout = BoxLayout(orientation='vertical')
-        self.grid_layout = GridLayout(cols=5, padding=10, spacing=10, size_hint_y=None)
-        self.grid_layout.bind(minimum_height=self.grid_layout.setter('height'))
+        self.layout = GridLayout(cols=5, padding=10, spacing=10, row_default_height=60, size_hint_y=None)
+        self.layout.bind(minimum_height=self.layout.setter('height'))
 
-        # Header
-        self.grid_layout.add_widget(Label(text="Upgrade Name", color=(1, 1, 1, 1)))
-        self.grid_layout.add_widget(Label(text="Description", color=(1, 1, 1, 1)))
-        self.grid_layout.add_widget(Label(text="Cost", color=(1, 1, 1, 1)))
-        self.grid_layout.add_widget(Label(text="RPS", color=(1, 1, 1, 1)))
-        self.grid_layout.add_widget(Label(text="Buy", color=(1, 1, 1, 1)))
+        headers = ["Upgrade Name", "Description", "Cost", "RPS", "Buy"]
+        for header in headers:
+            self.layout.add_widget(Label(text=header, color=(1, 1, 1, 1)))
 
-        self.buy_buttons = []
+        self.buttons = []
 
         for upgrade in self.upgrades:
-            self.grid_layout.add_widget(Label(text=upgrade['name'], color=(1, 1, 1, 1)))
-            self.grid_layout.add_widget(Label(text=upgrade['Description'], color=(1, 1, 1, 1)))
-            self.grid_layout.add_widget(Label(text=str(upgrade['cost']), color=(1, 1, 1, 1)))
-            self.grid_layout.add_widget(Label(text=f"+{upgrade['rps']}", color=(1, 1, 1, 1)))
+            self.layout.add_widget(Label(text=upgrade['name'], color=(1, 1, 1, 1)))
+            self.layout.add_widget(Label(text=upgrade['Description'], color=(1, 1, 1, 1)))
+            self.layout.add_widget(Label(text=str(upgrade['cost']), color=(1, 1, 1, 1)))
+            self.layout.add_widget(Label(text=f"+{upgrade['rps']}", color=(1, 1, 1, 1)))
 
-            btn = Button(
-                text=f"Buy {upgrade['name']} (Owned: {upgrade['owned']})",
-                size_hint=(None, None), size=(200, 50)
-            )
-            btn.bind(on_press=lambda b, u=upgrade: self.buy_upgrade(u))
-            self.buy_buttons.append(btn)
-            self.grid_layout.add_widget(btn)
+            buy_button = Button(text=f"Buy {upgrade['name']} (Owned: {upgrade['owned']})", size_hint=(None, None), size=(200, 50))
+            buy_button.bind(on_press=lambda btn, u=upgrade, b=buy_button: self.buy_upgrade(u, b))
+            self.buttons.append(buy_button)
+            self.layout.add_widget(buy_button)
 
-        self.layout.add_widget(self.grid_layout)
-        self.add_widget(self.layout)
+        root = BoxLayout(orientation='vertical')
+        root.add_widget(self.layout)
+        self.add_widget(root)
 
-    def buy_upgrade(self, upgrade):
+    def buy_upgrade(self, upgrade, button):
         tap_screen = self.manager.get_screen('tap_screen')
         if tap_screen.resources >= upgrade['cost']:
             tap_screen.resources -= upgrade['cost']
             tap_screen.resources_per_second += upgrade['rps']
             upgrade['owned'] += 1
-            self.update_buttons()
-
-    def update_buttons(self):
-        for i, upgrade in enumerate(self.upgrades):
-            self.buy_buttons[i].text = f"Buy {upgrade['name']} (Owned: {upgrade['owned']})"
+            button.text = f"Buy {upgrade['name']} (Owned: {upgrade['owned']})"
+            tap_screen.resource_label.text = f"Resources: {tap_screen.resources}"
+            tap_screen.rps_label.text = f"RPS: {tap_screen.resources_per_second}"
 
 
 class BuyUpgradesScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
-        self.buy_label = Label(text="Buy Upgrades Screen", color=(1, 1, 1, 1))
-        layout.add_widget(self.buy_label)
+
+        layout.add_widget(Label(text="Microtransactions", font_size=24, color=(1, 1, 0.5, 1)))
+
+        microtransactions = [
+            {"name": "Golden Wrench", "desc": "Double RPS for 5 minutes", "effect": self.double_rps},
+            {"name": "Speed Boost", "desc": "Auto tap once per second for 30s", "effect": self.auto_tap},
+            {"name": "Instant Resources", "desc": "Gain 1000 resources instantly", "effect": self.give_resources},
+            {"name": "Remove Ads", "desc": "There are no ads. But thanks anyway!", "effect": self.fake_thanks},
+            {"name": "Support Dev", "desc": "Support the dev (does nothing)", "effect": self.fake_thanks}
+        ]
+
+        for item in microtransactions:
+            row = BoxLayout(orientation='horizontal', size_hint_y=None, height=40, spacing=10)
+            row.add_widget(Label(text=f"{item['name']}: {item['desc']}", color=(1, 1, 1, 1)))
+            buy_button = Button(text="Buy", size_hint=(None, 1), width=100)
+            buy_button.bind(on_press=lambda b, effect=item["effect"]: effect())
+            row.add_widget(buy_button)
+            layout.add_widget(row)
+
         self.add_widget(layout)
+
+    def double_rps(self):
+        tap_screen = self.manager.get_screen('tap_screen')
+        tap_screen.resources_per_second *= 2
+        print("RPS Doubled!")
+
+    def auto_tap(self):
+        print("Auto tap for 30s started!")
+        Clock.schedule_interval(self.tap_once, 1)
+        Clock.schedule_once(self.stop_auto_tap, 30)
+
+    def tap_once(self, dt):
+        tap_screen = self.manager.get_screen('tap_screen')
+        tap_screen.resources += tap_screen.income
+        tap_screen.resource_label.text = f"Resources: {tap_screen.resources}"
+
+    def stop_auto_tap(self, dt):
+        Clock.unschedule(self.tap_once)
+        print("Auto tap ended.")
+
+    def give_resources(self):
+        tap_screen = self.manager.get_screen('tap_screen')
+        tap_screen.resources += 1000
+        tap_screen.resource_label.text = f"Resources: {tap_screen.resources}"
+        print("Given 1000 resources.")
+
+    def fake_thanks(self):
+        print("Thanks for your support! ❤️")
 
 
 class IdleClickerApp(App):
     def build(self):
         screen_manager = ScreenManager()
+
         screen_manager.add_widget(TapToEarnScreen(name='tap_screen'))
         screen_manager.add_widget(UpgradeScreen(name='upgrade_screen'))
         screen_manager.add_widget(BuyUpgradesScreen(name='buy_upgrade_screen'))
