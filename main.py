@@ -6,48 +6,17 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.clock import Clock
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.graphics import Color, RoundedRectangle
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.anchorlayout import AnchorLayout
-from kivy.uix.relativelayout import RelativeLayout
+from kivy.graphics import Color, RoundedRectangle
+
 kivy.require('1.11.1')
 
 THEME_BG = (0.1, 0.1, 0.1, 1)
 TEXT_COLOR = (1, 1, 1, 1)
 ACCENT_COLOR = (1, 0.5, 0, 1)
-GRAY_BORDER = (0.3, 0.3, 0.3, 1)  # Gray color for the border
+GRAY_BORDER = (0.3, 0.3, 0.3, 1)
 
-class BorderScreen(Screen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        with self.canvas.before:
-            # Fill entire background with gray
-            Color(*GRAY_BORDER)
-            self.bg = RoundedRectangle(radius=[0])
-
-            # Draw black "screen" area with rounded corners inset from the edges
-            Color(0, 0, 0, 1)
-            self.inner = RoundedRectangle(radius=[50])
-
-        self.bind(size=self.update_border, pos=self.update_border)
-
-    def update_border(self, *args):
-        # Full screen gray background
-        self.bg.pos = self.pos
-        self.bg.size = self.size
-
-        # Inset black screen to simulate a rounded "container"
-        padding = 20
-        self.inner.pos = (self.x + padding, self.y + padding)
-        self.inner.size = (self.width - 2 * padding, self.height - 2 * padding)
-
-
-
-
-
-class TapToEarnScreen(BorderScreen):
+class TapToEarnScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         layout = BoxLayout(orientation='vertical', padding=20, spacing=20)
@@ -62,7 +31,6 @@ class TapToEarnScreen(BorderScreen):
         self.rps_label = Label(text=f'RPS: {self.resources_per_second}', font_size=20, color=TEXT_COLOR)
         layout.add_widget(self.rps_label)
 
-        # Factory image as a button (use your own image file)
         self.icon_button = Button(
             size_hint=(None, None), size=(200, 200),
             background_normal='Factory.png',
@@ -88,7 +56,7 @@ class TapToEarnScreen(BorderScreen):
         self.rps_label.text = f'RPS: {self.resources_per_second}'
 
 
-class UpgradeScreen(BorderScreen):
+class UpgradeScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.upgrades = [
@@ -101,85 +69,40 @@ class UpgradeScreen(BorderScreen):
             {'name': 'Energy drinks', "Description" : "CAFFFIIINEEEE",'cost': 200, 'rps': 20}
         ]
 
-        # Creating a GridLayout for table-like structure
-        self.layout = GridLayout(cols=5, padding=10, spacing=10, row_default_height=50)
+        self.layout = GridLayout(cols=5, padding=20, spacing=10, row_default_height=50)
 
-        # Create the header row
-        self.layout.add_widget(Label(text="Upgrade Name", color=(1, 1, 1, 1), size_hint_y=None, height=40))
-        self.layout.add_widget(Label(text="Description", color=(1, 1, 1, 1), size_hint_y=None, height=40))
-        self.layout.add_widget(Label(text="Cost", color=(1, 1, 1, 1), size_hint_y=None, height=40))
-        self.layout.add_widget(Label(text="RPS", color=(1, 1, 1, 1), size_hint_y=None, height=40))
-        self.layout.add_widget(Label(text="Buy", color=(1, 1, 1, 1), size_hint_y=None, height=40))
+        self.layout.add_widget(Label(text="Upgrade Name", color=TEXT_COLOR))
+        self.layout.add_widget(Label(text="Description", color=TEXT_COLOR))
+        self.layout.add_widget(Label(text="Cost", color=TEXT_COLOR))
+        self.layout.add_widget(Label(text="RPS", color=TEXT_COLOR))
+        self.layout.add_widget(Label(text="Buy", color=TEXT_COLOR))
 
         for upgrade in self.upgrades:
-            # Add each upgrade's details in the grid
-            name_label = Label(
-                text=f"[b]{upgrade['name']}[/b]",
-                markup=True,
-                font_size=18,
-                color=(1, 1, 1, 1),
-                halign='left',
-                valign='top'  # Top alignment to prevent space above text
-            )
-            name_label.bind(size=name_label.setter('text_size'))  # Bind text_size to size
-            self.layout.add_widget(name_label)
+            self.layout.add_widget(Label(text=f"[b]{upgrade['name']}[/b]", markup=True, font_size=18, color=TEXT_COLOR))
+            self.layout.add_widget(Label(text=upgrade['Description'], font_size=14, color=TEXT_COLOR))
+            self.layout.add_widget(Label(text=str(upgrade['cost']), font_size=14, color=TEXT_COLOR))
+            self.layout.add_widget(Label(text=f"+{upgrade['rps']}", font_size=14, color=TEXT_COLOR))
 
-            desc_label = Label(
-                text=upgrade['Description'],
-                font_size=14,
-                color=(0.9, 0.9, 0.9, 1),
-                halign='left',
-                valign='top'  # Top alignment to prevent space above text
-            )
-            desc_label.bind(size=desc_label.setter('text_size'))  # Bind text_size to size
-            self.layout.add_widget(desc_label)
-
-            cost_label = Label(
-                text=str(upgrade['cost']),
-                font_size=14,
-                color=(1, 1, 1, 1),
-                halign='center',
-                valign='middle'
-            )
-            self.layout.add_widget(cost_label)
-
-            rps_label = Label(
-                text=f"+{upgrade['rps']}",
-                font_size=14,
-                color=(1, 1, 1, 1),
-                halign='center',
-                valign='middle'
-            )
-            self.layout.add_widget(rps_label)
-
-            # Create the buy button with fixed height
             buy_button = Button(text=f"Buy {upgrade['name']}", size_hint=(None, None), size=(150, 50))
             buy_button.bind(on_press=lambda btn, u=upgrade: self.buy_upgrade(u))
-
-            # Centering button vertically
-            buy_button.valign = 'middle'  # Ensures that the button is vertically centered
-            self.layout.add_widget(buy_button)  # Add the buy button for each upgrade
+            self.layout.add_widget(buy_button)
 
         self.add_widget(self.layout)
 
     def buy_upgrade(self, upgrade):
-        tap_screen = self.manager.get_screen('tap_screen')  # Get the TapToEarnScreen
+        tap_screen = self.manager.get_screen('tap_screen')
         if tap_screen.resources >= upgrade['cost']:
-            tap_screen.resources -= upgrade['cost']  # Deduct resources
-            tap_screen.resources_per_second += upgrade['rps']  # Increase RPS
-            self.update_upgrade_labels()
-
-    def update_upgrade_labels(self):
-        # No need for this method in this case because the upgrades are updated immediately
-        pass  # For this example, no update is required after purchase
+            tap_screen.resources -= upgrade['cost']
+            tap_screen.resources_per_second += upgrade['rps']
+            tap_screen.update_labels()
 
 
-class BuyUpgradesScreen(BorderScreen):
+class BuyUpgradesScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
 
-        layout.add_widget(Label(text="💰 Microtransactions", font_size=28, color=ACCENT_COLOR))
+        layout.add_widget(Label(text="\U0001F4B0 Microtransactions", font_size=28, color=ACCENT_COLOR))
 
         microtransactions = [
             {"name": "Golden Wrench", "desc": "Double RPS for 5 minutes", "effect": self.double_rps},
@@ -201,10 +124,8 @@ class BuyUpgradesScreen(BorderScreen):
     def double_rps(self):
         tap_screen = self.manager.get_screen('tap_screen')
         tap_screen.resources_per_second *= 2
-        print("🔥 RPS Doubled!")
 
     def auto_tap(self):
-        print("Auto tap active for 30s")
         Clock.schedule_interval(self.tap_once, 1)
         Clock.schedule_once(self.stop_auto_tap, 30)
 
@@ -215,16 +136,14 @@ class BuyUpgradesScreen(BorderScreen):
 
     def stop_auto_tap(self, dt):
         Clock.unschedule(self.tap_once)
-        print("Auto tap ended")
 
     def give_resources(self):
         tap_screen = self.manager.get_screen('tap_screen')
         tap_screen.resources += 1000
         tap_screen.update_labels()
-        print("+1000 Resources")
 
     def fake_thanks(self):
-        print("❤️ Thanks for supporting the dev!")
+        print("Thanks for supporting the dev!")
 
 
 class IdleClickerApp(App):
@@ -236,9 +155,7 @@ class IdleClickerApp(App):
         screen_manager.add_widget(UpgradeScreen(name='upgrade_screen'))
         screen_manager.add_widget(BuyUpgradesScreen(name='buy_upgrade_screen'))
 
-        # Remove the TabbedPanel and direct buttons to change screens
         tabs = BoxLayout(size_hint=(1, None), height=50)
-
         for label, screen in [
             ('Tap to Earn', 'tap_screen'),
             ('Upgrades', 'upgrade_screen'),
@@ -248,9 +165,29 @@ class IdleClickerApp(App):
             button.bind(on_release=lambda btn, s=screen: self.switch_screen(screen_manager, s))
             tabs.add_widget(button)
 
+        bordered_container = FloatLayout()
+
+        with bordered_container.canvas.before:
+            Color(*GRAY_BORDER)
+            self.outer_border = RoundedRectangle(radius=[40])
+            Color(*THEME_BG)
+            self.inner_background = RoundedRectangle(radius=[40])
+
+        def update_rects(instance, value):
+            padding = 20
+            size = (instance.width - padding * 2, instance.height - padding * 2)
+            pos = (instance.x + padding, instance.y + padding)
+            self.outer_border.size = (instance.width, instance.height)
+            self.outer_border.pos = instance.pos
+            self.inner_background.size = size
+            self.inner_background.pos = pos
+
+        bordered_container.bind(size=update_rects, pos=update_rects)
+        bordered_container.add_widget(screen_manager)
+
         root = BoxLayout(orientation='vertical')
         root.add_widget(tabs)
-        root.add_widget(screen_manager)
+        root.add_widget(bordered_container)
         return root
 
     def switch_screen(self, manager, name):
@@ -259,4 +196,3 @@ class IdleClickerApp(App):
 
 if __name__ == '__main__':
     IdleClickerApp().run()
-
